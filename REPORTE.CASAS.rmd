@@ -1,0 +1,824 @@
+---
+title: "R Notebook"
+output: 
+  html_notebook:
+    theme: united
+    toc: yes
+---
+setwd("C:/Users/Cayoyo/Desktop/R")
+library(tidyverse)
+portal4 <- read.csv("portal4.csv")
+
+
+
+```{r, fig.width=6.5, fig.height=4, echo=FALSE,collapse=TRUE}
+density <- density(portal3$precioPesos)
+
+plot_ly(opacity=0.5) %>% 
+  add_lines(x=~density$x,y=~density$y) %>% 
+layout(title = 'Density Distribution',
+           xaxis = list(title = "House Price"),
+           yaxis = list(title = "density"))
+
+```
+
+
+```{r,echo=TRUE}
+
+portal3 %>% count(precioPesos, sort=TRUE)
+  
+```
+
+
+
+```{r,echo=TRUE}
+
+portal3 %>% count(precioUF, sort=TRUE)
+  
+```
+
+
+
+```{r, fig.width=6.5, fig.height=4, echo=FALSE,collapse=TRUE}
+
+density <- density(log(portal3$precioPesos))
+
+plot_ly(opacity=0.5) %>% 
+  add_lines(x=~density$x,y=~density$y) %>% 
+layout(title = 'Density Distribution',
+           xaxis = list(title = "House Price"),
+           yaxis = list(title = "density"))
+
+
+
+```
+
+
+```{r,echo=TRUE,message=FALSE,warning=FALSE}
+
+m1<-lm(precioPesos ~ metrosUtiles,data= portal3)
+
+
+fig <-plot_ly(data = portal3, x = ~metrosUtiles, y = ~precioPesos)
+
+fig %>% layout(title = 'Square Feet vs House Price',
+               yaxis = list(title = "House Price"),
+               xaxis = list(title = "Square Feet")) %>%
+  add_markers(showlegend = FALSE)%>%
+  add_lines(y = ~fitted(m1),name ="Polynomial")
+
+```
+
+
+```{r}
+portal3 %>% count(baños2,sort=TRUE)
+```
+
+
+
+
+```{r,warning=FALSE}
+
+portal3 %>% 
+  ggplot(aes(x=(fct_relevel(as.character(baños2),"10", after = Inf)),y=(precioPesos)))+geom_boxplot()+
+labs(x="Number of Bathrooms", y="House Price",
+     title="Number of Bathrooms Vs. House Price")+ 
+  theme_ipsum_rc()
+
+
+
+```
+
+```{r}
+portal3%>% count(parking20,sort=TRUE)
+```
+
+
+```{r,warning=FALSE}
+
+portal3 %>% 
+  ggplot(aes(x=(fct_relevel(as.character(parking20),"10","11","12","13","14","15","16","17","18","19","20","22","25",
+  "30","39",after = Inf)),y=(precioPesos)))+geom_boxplot()+
+labs(x="Number of Parking Spots", y="House Price",
+     title="Number of Parking Spots Vs. House Price")+ 
+  theme_ipsum_rc()
+
+
+```
+
+
+```{r}
+portal3 %>% count(dormitorios2,sort=TRUE)
+```
+
+```{r,warning=FALSE}
+
+portal3 %>% 
+  ggplot(aes(x=(fct_relevel(as.character(dormitorios2),"10","11","12",after = Inf)),y=(precioPesos)))+geom_boxplot()+
+labs(x="Number of Bedrooms", y="House Price",
+     title="Number of Bedrooms Vs. House Price")+ 
+  theme_ipsum_rc()
+
+
+```
+
+
+
+
+```{r}
+
+m1<-lm(precioPesos ~ metrosTotales3,data= portal3)
+
+
+fig <-plot_ly(data = portal3, x = ~metrosTotales3, y = ~precioPesos)
+
+fig %>% layout(title = 'Total Square Feet vs House Price',
+               yaxis = list(title = "House Price"),
+               xaxis = list(title = " Total Square Feet")) %>%
+  add_markers(showlegend = FALSE)%>%
+  add_lines(y = ~fitted(m1),name ="Polynomial")
+```
+
+
+```{r, echo=TRUE,warning=FALSE,message=FALSE}
+
+library(randomForest)
+
+
+set.seed(123)
+
+quick_RF <- randomForest(x=portal3[,c(8,16:27,35)], y=portal3$precioPesos, ntree=100,importance=TRUE)
+imp_RF <- importance(quick_RF)
+imp_DF <- data.frame(Variables = row.names(imp_RF), MSE = imp_RF[,1])
+imp_DF <- imp_DF[order(imp_DF$MSE, decreasing = TRUE),]
+
+
+```
+
+
+```{r,echo=TRUE,warning=FALSE}
+ggplot(imp_DF[1:14,], aes(x=reorder(Variables, MSE), y=MSE, fill=MSE)) + geom_bar(stat = 'identity') + 
+  labs(x = 'Variables', y= '% increase MSE if variable is randomly permuted') + 
+  coord_flip() + theme(legend.position="none")
+```
+
+#Variables de Interes
+
+##Comunas
+
+```{r,echo=TRUE,warning=FALSE,message=TRUE}
+
+library(scales)
+
+portal3 %>% group_by(comuna) %>% summarise(precioPesos=median(precioPesos)) %>% 
+  ggplot(aes(x=fct_reorder(comuna,precioPesos), y=precioPesos)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(breaks= seq(0,8000000000 , by=100000000), labels = comma) +
+  geom_hline(yintercept= 484705882, linetype="dashed", color = "red")+
+labs(x="District", y=" Median House Price",
+     title="House Price Median By District")
+```
+
+
+```{r,echo=TRUE}
+portal3 %>% group_by(comuna) %>% summarise(precioPesos=mean(precioPesos)) %>% 
+  ggplot(aes(x=fct_reorder(comuna,precioPesos), y=precioPesos)) +
+  geom_bar(stat="identity", fill="#f68060", alpha=.6) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_continuous(breaks= seq(0,8000000000 , by=100000000), labels = comma) +
+  geom_hline(yintercept= 557383794, linetype="dashed", color = "red")+
+labs(x="District", y="Mean House Price",
+     title="House Price Mean By District")
+```
+
+
+
+```{r,echo=TRUE,warning=FALSE}
+
+portal3 %>% group_by(comuna) %>% summarise(n=n())%>% 
+ggplot(aes(x=fct_reorder(comuna,n),n)) +
+  geom_histogram(stat="identity")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+labs(x="District", y="N",
+     title="Number of Houses By District")
+```
+
+
+
+
+```{r}
+portal3 %>% count(comuna,sort=TRUE)
+```
+
+
+```{r,warning=FALSE}
+
+
+portal3$comuna2[portal3$comuna %in% c("la pintana")] <- 1
+portal3$comuna2[portal3$comuna %in% c("lo espejo","cerro navia","san ramón","renca","el bosque","la granja",
+                                      "quilicura")] <- 2
+portal3$comuna2[portal3$comuna %in% c("san bernardo","pedro aguirre cerda","puente alto","lo prado")] <- 3
+portal3$comuna2[portal3$comuna %in% c("cerrillos","maipu","pudahuel","conchali","estación central")] <- 4
+portal3$comuna2[portal3$comuna %in% c("san joaquín")] <- 5
+portal3$comuna2[portal3$comuna %in% c("la florida","quinta normal","independencia","macul")] <- 6
+portal3$comuna2[portal3$comuna %in% c("la cisterna","recoleta")] <- 7
+portal3$comuna2[portal3$comuna %in% c("huechuraba","santiago","san miguel","peñalolen")] <- 8
+
+portal3$comuna2[portal3$comuna %in% c("ñuñoa")] <- 9
+portal3$comuna2[portal3$comuna %in% c("colina")] <- 10
+portal3$comuna2[portal3$comuna %in% c("providencia","la reina")] <- 11
+
+portal3$comuna2[portal3$comuna %in% c("chicureo")] <- 12
+portal3$comuna2[portal3$comuna %in% c("las condes")] <- 13
+portal3$comuna2[portal3$comuna %in% c("vitacura")] <- 14
+portal3$comuna2[portal3$comuna %in% c("lo barnechea")] <- 15
+```
+
+
+```{r,message=FALSE}
+
+m3<-lm(precioPesos ~ comuna2,data= portal3)
+
+
+fig <-plot_ly(data = portal3, x = ~comuna2, y = ~precioPesos)
+
+fig %>% layout(title = 'District vs House Price',
+               yaxis = list(title = "House Price"),
+               xaxis = list(title = " District")) %>%
+  add_markers(showlegend = FALSE)%>%
+  add_lines(y = ~fitted(m3),name ="Polynomial")
+
+```
+
+
+```{r}
+
+m3<-lm(log(precioPesos) ~ comuna2,data= portal3)
+
+
+fig <-plot_ly(data = portal3, x = ~comuna2, y = ~log(precioPesos))
+
+fig %>% layout(title = 'District vs House Price',
+               yaxis = list(title = "Log House Price"),
+               xaxis = list(title = " District")) %>%
+  add_markers(showlegend = FALSE)%>%
+  add_lines(y = ~fitted(m3),name ="Polynomial")
+
+
+```
+
+
+##Outliers
+
+```{r,warning=FALSE}
+portal3 <-portal3 %>% filter(metrosTotales3<50000000)
+```
+
+
+
+```{r,warning=FALSE}
+ggplot(portal3,aes(x=log(precioPesos+1)))+geom_boxplot()+labs(x="House Price")+ 
+  theme_ipsum_rc()
+```
+
+
+```{r,message=FALSE}
+
+
+library(ggrepel)
+
+
+portal3 %>% mutate(ranking=rank(log(precioPesos+1))) %>%  
+ggplot(aes(x=log(metrosUtiles+1),y=log(precioPesos+1)))+geom_point()+
+  geom_text_repel(aes(label = ifelse(ranking<6, rownames(portal3), ''))) +
+  geom_smooth() 
+
+
+```
+
+
+Si uno mira el gráfico pareciera que de estas 5 casas con valores bajos solo hay dos que no siguen la tendencia.
+La 9673 y la 2215. 
+
+La casa 9673 es una propiedad en el casco histórico de la ciudad, a solo una cuadra del palacio presidencial por lo que creo que el valor de 10 millones debe ser un error de tipeo. La casa 2215 es una casa en chicureo, uno de los distrito mas exclusivos de santiago. Por lo tanto, creo que el creo de 23 millones tambien debe ser un error de tipeo. Por lo tanto vamos a eliminar estas observaciones
+
+```{r}
+
+portal3<- portal3[-c(9673,2215),]
+
+```
+
+
+
+```{r,warning=FALSE,message=FALSE}
+
+portal3 %>%mutate(rank.M=rank(log(metrosUtiles+1)),rank.P =rank(log(precioPesos+1))) %>% 
+   ggplot(aes(x=log(metrosUtiles+1),y=log(precioPesos+1)))+geom_point()+
+   geom_text_repel(aes(label = ifelse((log(metrosUtiles+1)>6&log(precioPesos+1)<18)|(log(metrosUtiles+1)<4&log(precioPesos+1)>20)|rank.M==1|rank.P>12058,
+                                      rownames(portal3), ''))) +
+   geom_smooth() 
+```
+
+Luego de mirar detenidamente estas observaciones he decidido eliminar las siguientes: las 5755 y 3932 porque son las misma observacion pero aparecen en dos comunas distintas (vitacura y las condes) y no tengo como saber cual es la correcta. La otra que voy a eliminar es la 11864 dado que es una casa que aparece en San Bernardo pero leyendo la descripción en realidad esta en Calera de Tango el cual es un sector rural con gran cantidad de parcelas (que no son de nuestro interes). La observacion 10506 la voy a mantener dado que a pesar de tener poco metraje su precio quizas se debe a los metros totales. La 873 está en lo barnechea, el cual es un distrito muy rico por lo cual es probable que a esto se debe su precio relativamente alto. Caso contrario pasa con 8181, ya que está en Puente Alto una de las comunas mas pobres de chile por lo cual es perfectamente razonable que a esto se deba su bajo precio relativo a pesar de su gran metraje.
+
+```{r}
+
+portal3<- portal3[-c(5755,3932,11864),]
+
+```
+
+
+###Metros Totales
+
+Miremos si es que hay outliers en la otra variable, la de metros totales
+
+```{r,message=FALSE}
+portal3 %>%
+  ggplot(aes(x=log(metrosTotales3+1),y=log(precioPesos+1)))+geom_point()+
+  geom_text_repel(aes(label = ifelse((log(metrosTotales3+1)>10)|(log(metrosTotales3+1)>7.5&log(precioPesos+1)<19)|
+                                       (log(metrosTotales3+1)>6.25&log(precioPesos+1)<18),
+                                     rownames(portal3), ''))) +
+  geom_smooth() 
+
+
+
+outliers<-portal3 %>% 
+  filter((log(metrosTotales3+1)>10)|(log(metrosTotales3+1)>8.75&log.precio<19)|
+                                       (log(metrosTotales3+1)>6.25&log(precioPesos+1)<18))
+```
+
+De estas casas las  que voy a eliminar son la 11817 y 11864 porque están en una zona rural fuera de nuestra area de estudio
+"Calera de Tango". Las observaciones 4915, 6734 y 5292. Son la misma observación pero en distintas comunas, por lo cual creo que pueden ser un error de tipeo. La 2077 en realidad posee 3 casas no una. La 9340 es una casa en el condominio altos de la arboleda oriente. Con la ayuda de google maps me di cuenta que es las casas de ese condimnio no tienen las dimensiones señaladas en la base.
+
+La casa 8182 y 10933 estan en barrios pobres por lo que es posible que que a eso se deba su valo bajor relativo. La 3429 tiene un error de tipeo, en realidad son 5000 metros totales no 50010. La casa 2421 va a ser eliminada gracias a la ayuda de google maps y del internet. Llegue a la conclusión de que lo mas probable es que esta casa sea un error de tipeo dado que no existen terrenos de las dimensiones que salen especificadas en la base http://www.lareserva.cl/lareserva.cl/web/publicaciones/category/loteos/. En google maps las casas tenian cerca de 5000 metros.
+
+
+
+```{r}
+portal3[3429,34] <- 5000
+
+```
+
+Ahora eliminamos las casas que parecieran ser un outlier
+
+```{r}
+
+portal3<-portal3 %>% filter(log(metrosTotales3+1)<10)
+
+```
+
+
+##Modelando
+
+###xGBOOST
+
+```{r,message=FALSE,warning=FALSE}
+
+library(tidymodels)
+```
+
+```{r}
+set.seed(2021)
+
+spl <- initial_split(portal3, .75,strata=precioPesos)
+train <- training(spl)
+test <- testing(spl)
+```
+
+
+```{r}
+
+mset <-metric_set(rmse)
+
+grid_control <- control_race(save_pred = TRUE,
+                             save_workflow = TRUE,
+                             extract = extract_model,
+                             verbose_elim = TRUE)
+set.seed(2021)
+train_fold10 <- train %>%
+  vfold_cv(10,strata=precioPesos)
+
+
+
+
+```
+
+
+
+```{r}
+
+library("finetune")
+
+
+doParallel::registerDoParallel()
+
+
+
+xg_rec <- recipe(precioPesos ~ metrosUtiles + dormitorios2 + baños2+piscina+metro+parking20+bodegas+garage+jacuzzi+calefaccion+ac+quincho+comuna2+metrosTotales3+datos4,
+                 data = train) %>%
+  step_log(all_numeric(), offset = 1) %>%
+  step_normalize(all_numeric()) %>% 
+  step_poly(metrosTotales3,degree=2) %>% 
+step_tokenize(datos4) %>%
+  step_tokenfilter(datos4,max_tokens=30)%>%
+  step_tf(datos4) %>%
+  step_dummy(all_nominal_predictors())
+
+
+
+
+xg_mod <- boost_tree("regression",
+                     mtry = tune(),
+                     trees = 1000,
+                     learn_rate = tune(),
+                     tree_depth = tune(),
+                     min_n = tune(),
+                     loss_reduction = tune(),
+                     sample_size = tune(),
+                     ) %>%
+                   set_engine("xgboost")
+
+xg_wf <- workflow() %>%
+  add_recipe(xg_rec) %>%
+  add_model(xg_mod)
+
+
+set.seed(123)
+
+xg_tune <- tune_race_anova(
+  xg_wf,
+  resamples = train_fold10,
+  metrics = mset,
+  control = grid_control,
+  grid = grid_latin_hypercube(tree_depth(),
+  min_n(),
+  loss_reduction(),
+  sample_size = sample_prop(),
+  finalize(mtry(),train),
+  learn_rate(),
+  size = 30))
+
+
+```
+
+
+```{r}
+
+xg_tune %>%
+  collect_metrics() %>%  arrange(mean)
+```
+
+0.3542 con 5 folds
+0.3262 con 10 folds
+0.3374 con 10 y strata
+0.2326 con 10 folds y logaritmo y polinomio
+
+
+```{r}
+plot_race(xg_tune)
+
+```
+
+
+
+
+```{r,warning=FALSE}
+xg_tune %>%
+  collect_metrics() %>%
+  filter(.metric == "rmse") %>%
+  select(mean, mtry:sample_size) %>%
+  pivot_longer(mtry:sample_size,
+               values_to = "value",
+               names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(alpha = 0.8, show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "rmse")
+```
+
+
+```{r}
+best_rmse <- select_best(xg_tune, "rmse")
+best_rmse
+```
+
+
+```{r}
+final_xgb <- finalize_workflow(
+  xg_wf,
+  best_rmse
+)
+
+final_xgb
+
+```
+
+
+
+
+```{r}
+
+library(vip)
+
+final_xgb %>%
+  fit(data = train) %>%
+  pull_workflow_fit() %>%
+  vip(geom = "point")
+```
+
+
+
+```{r}
+final_res <- last_fit(final_xgb, spl)
+
+collect_metrics(final_res)
+```
+
+
+
+Con 5 folds 0.37532, r 0.855
+Con 10 folds 0.35237 r 0.881
+Con 10 folds strata 0.32071 r 0.900
+El final 0.2268201 con r de 0.9476
+ahora da 0.22524
+da 0.2277
+
+ahora da 0.223 y 0.9489
+empeoro con 100 a 0.230
+
+
+##Lasso
+
+
+
+```{r}
+library(tidytext)
+
+portal3 %>%
+  unnest_tokens(word, datos4) %>%
+  group_by(word) %>%
+  summarize(avg_price=log(median(precioPesos)),n=n()) %>% filter(n>100)%>% arrange(desc(avg_price)) %>% 
+  head(50) %>%
+  mutate(word = fct_reorder(word, avg_price)) %>%
+  ggplot(aes(avg_price, word, size = n)) +
+  geom_point()
+```
+
+
+Ahora las palabras con menor precio
+
+
+
+```{r}
+portal3 %>%
+  unnest_tokens(word, datos4) %>%
+  group_by(word) %>%
+  summarize(avg_price=log(median(precioPesos)),n=n()) %>% filter(n>100)%>% arrange(desc(avg_price)) %>% 
+  tail(50) %>%
+  mutate(word = fct_reorder(word, avg_price)) %>%
+  ggplot(aes(avg_price, word, size = n)) +
+  geom_point()
+```
+
+
+##Ahora corramos el 
+
+```{r,warning=FALSE,message=FALSE}
+
+set.seed(2021)
+train_fold10 <- train %>%
+  vfold_cv(10,strata=precioPesos)
+
+grid_control <- control_grid(save_pred = TRUE,
+                             save_workflow = TRUE,
+                             extract = extract_model)
+
+doParallel::registerDoParallel()
+
+library(textrecipes)
+
+lin_rec <- recipe(precioPesos ~ metrosUtiles + dormitorios2 + baños2+piscina+metro+parking20+bodegas+garage+jacuzzi+calefaccion+ac+quincho+comuna2+metrosTotales3+datos4,
+                  data = train) %>%
+  step_tokenize(datos4) %>%
+  step_tokenfilter(datos4,max_tokens=1250) %>%
+  step_tf(datos4) %>%
+  step_log(all_numeric(), offset = 1) %>%
+  step_normalize(all_numeric()) %>% 
+  step_poly(metrosTotales3,degree=2) %>% 
+   step_poly(metrosUtiles,degree=3) %>% 
+  step_dummy(all_nominal_predictors())
+
+lin_mod <- linear_reg(penalty = tune(),mixture = 1 ) %>%
+  set_engine("glmnet")
+
+lin_wf <- workflow() %>%
+  add_recipe(lin_rec) 
+
+lambda_grid <- grid_regular(penalty(), levels = 50)
+
+set.seed(2020)
+
+lin_tune <- tune_grid(
+  lin_wf %>% add_model(lin_mod),
+  resamples = train_fold10,
+  control = grid_control,
+  grid = lambda_grid)
+
+              
+```
+
+
+
+```{r}
+lin_tune %>%
+  collect_metrics()
+```
+
+
+
+
+```{r,message=FALSE,warning=FALSE}
+lin_tune %>%
+  collect_metrics() %>%
+  ggplot(aes(penalty, mean, color = .metric)) +
+  geom_line(size = 1.5) +
+  facet_wrap(~.metric, scales = "free", nrow = 2) +
+  scale_x_log10() +
+  theme(legend.position = "none")
+```
+
+
+
+
+
+
+```{r,warning=FALSE}
+lowest_rmse <- lin_tune %>%
+  select_best("rmse", maximize = FALSE)
+
+
+```
+
+
+```{r}
+
+
+wf <- workflow() %>%
+  add_recipe(lin_rec)
+
+final_lasso <- finalize_workflow(
+  wf %>% add_model(lin_mod),
+  lowest_rmse)
+```
+
+
+```{r}
+library(vip)
+
+final_lasso %>%
+  fit(train) %>%
+  pull_workflow_fit() %>%
+  vi(lambda = lowest_rmse$penalty) %>%
+  mutate(
+    Importance = abs(Importance),
+    Variable = fct_reorder(Variable, Importance))%>% head(20) %>% 
+  ggplot(aes(x = Importance, y = Variable, fill = Sign)) +
+  geom_col() +
+  scale_x_continuous(expand = c(0, 0)) +
+  labs(y = NULL)
+```
+
+
+
+
+Miremos las palabras que tienen mayor importancia
+
+
+```{r}
+graph<-final_lasso %>%
+  fit(train) %>%
+  pull_workflow_fit() %>%
+  vi(lambda = lowest_rmse$penalty) %>%
+  mutate(
+    Importance = abs(Importance),
+    Variable = fct_reorder(Variable, Importance))%>%filter(str_detect(Variable,"tf_datos4"))
+
+graph%>%mutate(Variable2=str_replace(graph$Variable,"tf_datos4_",""),
+               Variable = fct_reorder(Variable2, Importance)) %>% 
+         head(40) %>% 
+  ggplot(aes(x = Importance, y = Variable, fill = Sign)) +
+  geom_col() +
+  scale_x_continuous(expand = c(0, 0)) +
+  labs(y = NULL)
+```
+
+
+```{r}
+last_fit(
+  final_lasso,
+  spl
+) %>%
+  collect_metrics()
+```
+
+
+Con 1000 palabras y metros totales cuadrado 0.269
+Todo lo anterior mas metros utiles al cubo 0.267
+Con todo lo anterio el modelo llega a 0.266
+
+
+
+
+###Emsable
+
+
+# Finalize parameters 
+```{r}
+lin_final_param <- lin_tune %>% show_best("rmse") %>% 
+  head(1) %>% 
+  select(penalty)
+
+xgboost_final_param <- xg_tune %>% 
+  show_best("rmse") %>% 
+  head(1) %>% 
+  select(mtry:sample_size)
+```
+
+
+
+# Collect model predictions to stack
+```{r}
+xgboost_stack <- xg_tune %>% 
+  collect_predictions() %>% 
+  inner_join(xgboost_final_param) %>% 
+  select(id, .row, xgboost = .pred)
+
+lin_stack <- lin_tune %>% 
+  collect_predictions() %>% 
+  inner_join(lin_final_param) %>% 
+  select(id, .row, precioPesos, lin = .pred)
+
+```
+
+# Create ensemble data
+
+```{r}
+
+stack_df <- xgboost_stack %>% 
+  left_join(lin_stack) %>% 
+  select(-id, -.row)
+
+stack_model <- linear_reg(penalty =0.1, mixture = 1) %>% 
+  set_mode("regression") %>% 
+  set_engine("glmnet") %>% 
+  fit(precioPesos~., data = stack_df)
+
+
+stack_model %>% tidy()
+```
+0.5319
+
+
+# Finalize submodels
+```{r}
+
+xgboost_wf <- xg_wf %>% 
+  finalize_workflow(xgboost_final_param) %>% 
+  last_fit(spl)
+
+linear_wf <- lin_wf  %>%  add_model(lin_mod) %>% 
+  finalize_workflow(lin_final_param) %>% 
+  last_fit(spl)
+
+```
+
+
+# Extract Predictions from Submodels
+```{r}
+stack_final_df <- tibble("model" = list(xgboost_wf, linear_wf),
+                         "model_names" = c("xgboost", "lin")) %>% 
+  mutate(pred = map(model, collect_predictions))
+
+stack_final_df <- stack_final_df %>% 
+  select(model_names, pred) %>% 
+  unnest(pred) %>% 
+  pivot_wider(names_from = model_names, values_from = .pred) %>% 
+  select(-id, -.row,-.config ) 
+  
+predict(stack_model, stack_final_df) %>% 
+  bind_cols(stack_final_df) %>% 
+  rename("stack" = .pred) %>% 
+  pivot_longer(-precioPesos) %>% 
+  group_by(name) %>% 
+  mset(truth = precioPesos, estimate = value) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = .metric, values_from = .estimate) %>% 
+  arrange(rmse)
+```
+
+
+
+
+
